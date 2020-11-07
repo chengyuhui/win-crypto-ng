@@ -236,7 +236,7 @@ impl<Kind: AlgorithmKind> HashAlgorithm<Kind> {
         })
     }
 
-    fn create_hash(&self, secret: Option<&[u8]>, iv: Option<&[u8]>) -> Result<Hash> {
+    fn create_hash(&self, secret: Option<&[u8]>, iv: Option<&[u8]>, hmac: bool) -> Result<Hash> {
         let (sec_ptr, sec_len) = secret
             .map(|x| (x.as_ptr(), x.len()))
             .unwrap_or((std::ptr::null(), 0));
@@ -252,7 +252,7 @@ impl<Kind: AlgorithmKind> HashAlgorithm<Kind> {
                 object.len() as ULONG,
                 sec_ptr as *mut _,
                 sec_len as ULONG,
-                0,
+                if hmac { BCRYPT_ALG_HANDLE_HMAC_FLAG } else { 0 },
             ))?;
         };
 
@@ -270,7 +270,13 @@ impl<Kind: AlgorithmKind> HashAlgorithm<Kind> {
 impl HashAlgorithm<HashAlgorithmId> {
     /// Creates a new hash from the algorithm
     pub fn new_hash(&self) -> Result<Hash> {
-        self.create_hash(None, None)
+        self.create_hash(None, None, false)
+    }
+
+    /// Creates a new Message Authentication Code (MAC), if supported by the
+    /// backing algorithm.
+    pub fn new_mac(&self, secret: &[u8], iv: Option<&[u8]>) -> Result<Hash> {
+        self.create_hash(Some(secret), iv, true)
     }
 }
 
@@ -280,7 +286,7 @@ impl HashAlgorithm<MacAlgorithmId> {
     ///
     /// Passing IV is required for GMAC mode, otherwise don't pass it for OMAC.
     pub fn new_mac(&self, secret: &[u8], iv: Option<&[u8]>) -> Result<Hash> {
-        self.create_hash(Some(secret), iv)
+        self.create_hash(Some(secret), iv, true)
     }
 }
 

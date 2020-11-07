@@ -101,6 +101,10 @@ pub struct AlgoHandle {
 
 impl AlgoHandle {
     pub fn open(id: &str) -> Result<Self> {
+        Self::open_flags(id, 0)
+    }
+
+    pub fn open_flags(id: &str, flags: ULONG) -> Result<Self> {
         let mut handle = null_mut::<VOID>();
         unsafe {
             let id_str = WindowsString::from(id);
@@ -108,7 +112,7 @@ impl AlgoHandle {
                 &mut handle,
                 id_str.as_ptr(),
                 null(),
-                0,
+                flags,
             ))
             .map(|_| Self { handle })
         }
